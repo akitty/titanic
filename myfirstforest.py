@@ -8,7 +8,7 @@ please see packages.python.org/milk/randomforests.html for more
 import pandas as pd
 import numpy as np
 import csv as csv
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
 from sklearn import tree
 from sklearn import cross_validation
 
@@ -23,7 +23,11 @@ def prepareData(data):
 
     # female = 0, Male = 1
     data['Gender'] = data['Sex'].map( {'female': 0, 'male': 1} ).astype(int)
+    
 
+    data['embark_c'] = data.Embarked.map(lambda x: 1 if x=="C" else 0)
+    data['embark_q'] = data.Embarked.map(lambda x: 1 if x=="Q" else 0)
+    data['embark_s'] = data.Embarked.map(lambda x: 1 if x=="S" else 0)
     # Embarked from 'C', 'Q', 'S'
     # Note this is not ideal: in translating categories to numbers, Port "2" is not 2 times greater than Port "1", etc.
 
@@ -35,12 +39,12 @@ def prepareData(data):
     Ports_dict = { name : i for i, name in Ports }              # set up a dictionary in the form  Ports : index
     data.Embarked = data.Embarked.map( lambda x: Ports_dict[x]).astype(int)     # Convert all Embark strings to int
 
+    
+
     # All the ages with no data -> make the median of all Ages
     median_age = data['Age'].dropna().median()
     if len(data.Age[ data.Age.isnull() ]) > 0:
         data.loc[ (data.Age.isnull()), 'Age'] = -100
-
-     
 
     # All the missing Fares -> assume median of their respective class
     if len(data.Fare[ data.Fare.isnull() ]) > 0:
@@ -50,7 +54,7 @@ def prepareData(data):
         for f in range(0,3):                                              # loop 0 to 2
             data.loc[ (data.Fare.isnull()) & (data.Pclass == f+1 ), 'Fare'] = median_fare[f]
     # Remove the Name column, Cabin, Ticket, and Sex (since I copied and filled it to Gender)
-    data = data.drop(['Name', 'Sex', 'Ticket', 'Cabin', 'PassengerId','SibSp', 'Parch', 'Fare', 'Embarked'], axis=1)
+    data = data.drop(['Name', 'Sex', 'Ticket', 'Cabin', 'PassengerId','Embarked'], axis=1)
 
     return data
 
@@ -59,6 +63,9 @@ if __name__ == '__main__':
     train_df = pd.read_csv('train.csv', header=0)        # Load the train file into a dataframe
     # TEST DATA
     test_df = pd.read_csv('test.csv', header=0)        # Load the test file into a dataframe
+
+    answers= pd.read_csv('answerstest.csv', header=0)
+    answers_targets = answers['Survived'].values
 
     # Collect the test data's PassengerIds before dropping it
     ids = test_df['PassengerId'].values
@@ -74,17 +81,22 @@ if __name__ == '__main__':
     test_data = test_df.values
 
     print 'Training...'
-    forest = RandomForestClassifier(n_estimators=250)
+    forest = AdaBoostClassifier(n_estimators=250)
+    #forest = RandomForestClassifier(n_estimators=250)
     #forest = tree.DecisionTreeClassifier()
 
     scores = cross_validation.cross_val_score(forest, train_data[0::,1::], train_data[0::,0], cv=5)
-    print scores
+    print 'cross validate scores',scores
 
 
     forest = forest.fit( train_data[0::,1::], train_data[0::,0] )
-
+    
     print 'Predicting...'
     output = forest.predict(test_data).astype(int)
+    print len(test_data)
+    print len(answers_targets)
+    score = forest.score(test_data,answers_targets)
+    print "score",score
 
 
     predictions_file = open("myfirstforest.csv", "wb")
@@ -93,3 +105,4 @@ if __name__ == '__main__':
     open_file_object.writerows(zip(ids, output))
     predictions_file.close()
     print 'Done.'
+    

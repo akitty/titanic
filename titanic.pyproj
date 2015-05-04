@@ -24,6 +24,9 @@
   <ItemGroup>
     <Compile Include="genderclassmodel.py" />
     <Compile Include="gendermodel.py" />
+    <Compile Include="generateanswers.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="myfirstforest.py" />
     <Compile Include="titanic.py" />
   </ItemGroup>
