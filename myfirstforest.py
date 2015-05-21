@@ -23,7 +23,7 @@ def prepareData(data,train=True):
     # I need to fill in the missing values of the data and make it complete.
 
     # female = 0, Male = 1
-    data['Gender'] = data['Sex'].map( {'female': 1, 'male': 2} ).astype(int)
+    data['Gender'] = data['Sex'].map( {'female': 0, 'male': 1} ).astype(int)
     
 
     #data['embark_c'] = data.Embarked.map(lambda x: 1 if x=="C" else 0)
@@ -50,7 +50,7 @@ def prepareData(data,train=True):
     # All the ages with no data -> make the median of all Ages
     median_age = data['Age'].dropna().median()
     if len(data.Age[ data.Age.isnull() ]) > 0:
-        data.loc[ (data.Age.isnull()), 'Age'] = -100
+        data.loc[ (data.Age.isnull()), 'Age'] = median_age
 
     
 
@@ -73,7 +73,19 @@ def prepareData(data,train=True):
     #data['class_fare'] = data['Pclass'] * data['Fare']
 
     # Remove the Name column, Cabin, Ticket, and Sex (since I copied and filled it to Gender)
-    data = data.drop(['Name', 'Sex', 'Ticket', 'Cabin', 'PassengerId','Embarked','SibSp','Parch','Pclass','Age'], axis=1)
+    data = data.drop(['Name',
+        'Sex',
+        'Ticket',
+        'Cabin',
+        'PassengerId',
+        'Embarked',
+        #'SibSp',
+        'Parch',
+        #'Age',
+        #'Fare',
+        #'Pclass',
+        ],
+        axis=1)
 
     return data
 
@@ -98,7 +110,8 @@ if __name__ == '__main__':
     # Convert back to a numpy array
     train_data = train_df.values
     test_data = test_df.values
-
+    train_x = train_data[0::,1::]
+    train_y = train_data[0::,0]
     print 'Training...'
     #forest = AdaBoostClassifier(n_estimators=100)
     #forest = RandomForestClassifier(n_estimators=25)
@@ -113,11 +126,25 @@ if __name__ == '__main__':
     clfs=[]
     #folds = StratifiedKFold(train_data[0::,0], 10)
     #folds = KFold(len(train_data), 10)
-    folds = ShuffleSplit(len(train_data), n_iter=20, test_size=0.10,random_state=0)
-    scores=[]
-    for i,(train,test) in enumerate(folds):
-        clfs+=[forest.fit(train_data[0::,1::][train], train_data[0::,0][train])]
-        scores+=[forest.score(test_data,answers_targets)]
+    # folds = ShuffleSplit(len(train_data), n_iter=20, test_size=0.10,random_state=0)
+    # scores=[]
+    # for i,(train,test) in enumerate(folds):
+    #     clfs+=[forest.fit(train_data[0::,1::][train], train_data[0::,0][train])]
+    #     scores+=[forest.score(test_data,answers_targets)]
+
+    clf = RandomForestClassifier(n_estimators=5000,
+                                #criterion='entropy',
+                                #min_samples_split=5,
+                                min_samples_leaf=10,
+                                random_state=0
+                                #max_features=0.5, 
+                                #max_depth=20,
+                                #oob_score=True
+                                )
+    clf.fit(train_x, train_y)
+    print clf.feature_importances_
+    scores = clf.score(test_data, answers_targets)
+    #scores = clf.score(train_x, train_y)
     
     #scores=[]        
    # for clf in clfs:
